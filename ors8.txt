@@ -1,0 +1,186 @@
+Q1)
+#include<stdio.h>
+int frame[5][2],nf;
+int searchFrames(int sv)
+{
+ int x;
+for(x=0;x<nf;x++)
+ {
+ if(sv==frame[x][0])
+ {
+ return x;
+ }
+ }
+ return -2;
+}
+void displayMemory()
+{
+ int i;
+printf("\n\nFrame Contains |");
+ for(i=0;i<nf;i++)
+ printf(" %d | ",frame[i][0]);
+}
+int findFreeFrame()
+{
+ int i,min=frame[0][1],ri=0;
+ for(i=0;i<nf;i++)
+ {
+ if(frame[i][1]==-1)
+ {
+ return i;
+ }
+ }
+ for(i=0;i<nf;i++)
+ { 
+
+if(min>frame[i][1])
+ {
+ min=frame[i][1];
+ ri=i;
+ }
+ }
+ return ri;
+}
+main()
+{
+ int rs[]={8, 5, 7, 8, 5, 7, 2, 3, 7, 3, 5, 9, 4, 6, 2};
+ int ts=0;
+int n=15,i,j,pf=0,srch,insert_index;
+ printf("Enter how many frames");
+scanf("%d",&nf);
+ for(i=0;i<nf;i++)
+ {
+ for(j=0;j<2;j++)
+ frame[i][j]=-1;
+ }
+ displayMemory();
+for(i=0;i<n;i++)
+ {
+ srch=searchFrames(rs[i]);
+ if(srch==-2)
+ {
+ pf++;
+ insert_index=findFreeFrame();
+ frame[insert_index][0]=rs[i];
+ frame[insert_index][1]=ts++;
+ }
+ else
+ {
+ frame[srch][1]=ts++;
+ }
+
+ displayMemory();
+ }
+ printf("\n\nTotal Page Faults Occured is %d\n",pf);
+}
+
+Q2)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#define MAX_CMD_LEN 1024
+#define MAX_ARGS 100
+
+void search_first_occurrence(const char *filename, const char *pattern) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("fopen");
+        return;
+    }
+
+    char line[MAX_CMD_LEN];
+    int line_number = 0;
+
+    while (fgets(line, sizeof(line), file)) {
+        line_number++;
+        if (strstr(line, pattern)) {
+            printf("First occurrence found in line %d: %s", line_number, line);
+            fclose(file);
+            return;
+        }
+    }
+
+    printf("Pattern not found in the file.\n");
+    fclose(file);
+}
+
+void count_occurrences(const char *filename, const char *pattern) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("fopen");
+        return;
+    }
+
+    char line[MAX_CMD_LEN];
+    int count = 0;
+
+    while (fgets(line, sizeof(line), file)) {
+        char *pos = line;
+        while ((pos = strstr(pos, pattern)) != NULL) {
+            count++;
+            pos += strlen(pattern);
+        }
+    }
+
+    printf("Total occurrences of pattern: %d\n", count);
+    fclose(file);
+}
+
+int main() {
+    char command[MAX_CMD_LEN];
+
+    while (1) {
+        printf("myshell$ ");
+        if (fgets(command, sizeof(command), stdin) == NULL) {
+            break;
+        }
+
+        command[strcspn(command, "\n")] = 0;
+
+        char *args[MAX_ARGS];
+        char *token = strtok(command, " ");
+        int i = 0;
+
+        while (token != NULL && i < MAX_ARGS - 1) {
+            args[i++] = token;
+            token = strtok(NULL, " ");
+        }
+        args[i] = NULL;
+
+        if (i > 0 && strcmp(args[0], "search") == 0) {
+            if (i < 4) {
+                printf("Usage: search [f|c] filename pattern\n");
+                continue;
+            }
+
+            const char *mode = args[1];
+            const char *filename = args[2];
+            const char *pattern = args[3];
+
+            pid_t pid = fork();
+            if (pid < 0) {
+                perror("fork");
+                continue;
+            } else if (pid == 0) {
+                if (strcmp(mode, "f") == 0) {
+                    search_first_occurrence(filename, pattern);
+                } else if (strcmp(mode, "c") == 0) {
+                    count_occurrences(filename, pattern);
+                } else {
+                    printf("Invalid mode: %s. Use 'f' for first occurrence or 'c' for count.\n", mode);
+                }
+                exit(0);
+            } else {
+                wait(NULL);
+            }
+        } else {
+            printf("Unknown command: %s\n", args[0]);
+        }
+    }
+
+    return 0;
+}

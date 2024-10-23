@@ -1,0 +1,135 @@
+Q1)
+#include <stdio.h>
+
+#define MAX_FRAMES 10
+#define MAX_PAGES 20
+
+void lruPageReplacement(int reference[], int reference_size, int frames) {
+    int pages[MAX_FRAMES] = {-1};
+    int last_used[MAX_FRAMES] = {-1};
+    int page_faults = 0;
+
+    for (int i = 0; i < reference_size; i++) {
+        int page = reference[i];
+        int found = 0;
+
+        for (int j = 0; j < frames; j++) {
+            if (pages[j] == page) {
+                found = 1;
+                last_used[j] = i;
+                break;
+            }
+        }
+
+        if (!found) {
+            page_faults++;
+            int replace_index = -1;
+
+            for (int j = 0; j < frames; j++) {
+                if (pages[j] == -1) {
+                    replace_index = j;
+                    break;
+                }
+                if (replace_index == -1 || last_used[j] < last_used[replace_index]) {
+                    replace_index = j;
+                }
+            }
+
+            pages[replace_index] = page;
+            last_used[replace_index] = i;
+            printf("Page fault: %d, Loaded: %d\n", page_faults, page);
+        }
+
+        printf("Current frames: ");
+        for (int j = 0; j < frames; j++) {
+            if (pages[j] != -1) {
+                printf("%d ", pages[j]);
+            }
+        }
+        printf("\n");
+    }
+
+    printf("\nTotal Page Faults: %d\n", page_faults);
+}
+
+int main() {
+    int reference[] = {3, 4, 5, 6, 3, 4, 7, 3, 4, 5, 6, 7, 2, 4, 6};
+    int reference_size = sizeof(reference) / sizeof(reference[0]);
+    int frames;
+
+    printf("Enter number of frames (1 to %d): ", MAX_FRAMES);
+    scanf("%d", &frames);
+
+    if (frames < 1 || frames > MAX_FRAMES) {
+        printf("Invalid number of frames.\n");
+        return 1;
+    }
+
+    lruPageReplacement(reference, reference_size, frames);
+    return 0;
+}
+
+Q2)
+#include <stdio.h>
+
+typedef struct {
+    int id;
+    int arrival;
+    int burst;
+    int waiting;
+    int turnaround;
+} Process;
+
+void calculateFCFS(Process processes[], int n) {
+    int total_waiting = 0, total_turnaround = 0;
+    int gantt_chart[100];
+    int current_time = 0;
+
+    for (int i = 0; i < n; i++) {
+        if (current_time < processes[i].arrival) {
+            current_time = processes[i].arrival;
+        }
+        gantt_chart[i] = processes[i].id;
+        processes[i].waiting = current_time - processes[i].arrival;
+        total_waiting += processes[i].waiting;
+        current_time += processes[i].burst;
+        processes[i].turnaround = processes[i].waiting + processes[i].burst;
+        total_turnaround += processes[i].turnaround;
+    }
+
+    printf("\nGantt Chart:\n");
+    for (int i = 0; i < n; i++) {
+        printf("P%d ", gantt_chart[i]);
+        if (i < n - 1) {
+            printf("--> ");
+        }
+    }
+    printf("\n");
+
+    printf("Process\tTurnaround Time\tWaiting Time\n");
+    for (int i = 0; i < n; i++) {
+        printf("P%d\t%d\t\t%d\n", processes[i].id, processes[i].turnaround, processes[i].waiting);
+    }
+
+    printf("\nAverage Turnaround Time: %.2f\n", (float)total_turnaround / n);
+    printf("Average Waiting Time: %.2f\n", (float)total_waiting / n);
+}
+
+int main() {
+    int n;
+    printf("Enter the number of processes: ");
+    scanf("%d", &n);
+
+    Process processes[n];
+
+    for (int i = 0; i < n; i++) {
+        processes[i].id = i + 1;
+        printf("Enter arrival time and burst time for Process P%d: ", processes[i].id);
+        scanf("%d %d", &processes[i].arrival, &processes[i].burst);
+        processes[i].waiting = 0;
+        processes[i].turnaround = 0;
+    }
+
+    calculateFCFS(processes, n);
+    return 0;
+}

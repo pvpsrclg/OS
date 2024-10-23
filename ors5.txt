@@ -1,0 +1,187 @@
+Q1)
+#include<stdio.h>
+int main()
+{
+ int no_of_frames, no_of_pages, frames[10], pages[30], temp[10], flag1, flag2, flag3, i, j, k, pos, max, faults = 0;
+ printf("Enter number of frames: ");
+scanf("%d", &no_of_frames);
+
+ printf("Enter number of pages: ");
+scanf("%d", &no_of_pages);
+
+ printf("Enter page reference string: ");
+for(i = 0; i < no_of_pages; ++i){
+ scanf("%d", &pages[i]);
+ }
+
+ for(i = 0; i < no_of_frames; ++i){
+ frames[i] = -1;
+ }
+
+ for(i = 0; i < no_of_pages; ++i){
+ flag1 = flag2 = 0;
+
+ for(j = 0; j < no_of_frames; ++j){
+ if(frames[j] == pages[i]){
+ flag1 = flag2 = 1;
+ break;
+ }
+ }
+
+ if(flag1 == 0){
+ for(j = 0; j < no_of_frames; ++j){
+ if(frames[j] == -1){
+ faults++;
+ frames[j] = pages[i];
+ flag2 = 1;
+ break;
+ }
+ }
+ }
+
+ if(flag2 == 0){
+ flag3 =0;
+
+ for(j = 0; j < no_of_frames; ++j){
+ temp[j] = -1;
+for(k = i + 1; k < no_of_pages; ++k){
+if(frames[j] == pages[k]){
+ temp[j] = k;
+break;
+ }
+ }
+ }
+
+ for(j = 0; j < no_of_frames; ++j){
+ if(temp[j] == -1){
+ pos = j;
+ flag3 = 1;
+break;
+ }
+ }
+ if(flag3 ==0){
+ max = temp[0];
+ pos = 0;
+
+for(j = 1; j < no_of_frames; ++j){
+if(temp[j] > max){
+ max = temp[j];
+ pos = j;
+ }
+ }
+ }
+frames[pos] = pages[i];
+faults++;
+ }
+ printf("\n");
+ for(j = 0; j < no_of_frames; ++j){
+ printf("%d\t", frames[j]);
+ }
+ }
+ printf("\n\nTotal Page Faults = %d", faults);
+
+ return 0;
+} 
+
+Q2)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+
+#define MAX_CMD_LEN 1024
+#define MAX_ARGS 100
+
+void search_first_occurrence(const char *filename, const char *pattern) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("fopen");
+        return;
+    }
+
+    char line[MAX_CMD_LEN];
+    int line_number = 0;
+
+    while (fgets(line, sizeof(line), file)) {
+        line_number++;
+        if (strstr(line, pattern)) {
+            printf("First occurrence found in line %d: %s", line_number, line);
+            fclose(file);
+            return;
+        }
+    }
+    
+    printf("Pattern not found in the file.\n");
+    fclose(file);
+}
+
+void count_occurrences(const char *filename, const char *pattern) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("fopen");
+        return;
+    }
+
+    char line[MAX_CMD_LEN];
+    int count = 0;
+
+    while (fgets(line, sizeof(line), file)) {
+        char *pos = line;
+        while ((pos = strstr(pos, pattern)) != NULL) {
+            count++;
+            pos += strlen(pattern);
+        }
+    }
+
+    printf("Total occurrences of pattern: %d\n", count);
+    fclose(file);
+}
+
+int main() {
+    char command[MAX_CMD_LEN];
+
+    while (1) {
+        printf("myshell$ ");
+        if (fgets(command, sizeof(command), stdin) == NULL) {
+            break; // Exit on EOF or error
+        }
+
+        // Remove the newline character
+        command[strcspn(command, "\n")] = 0;
+
+        // Tokenize the command
+        char *args[MAX_ARGS];
+        char *token = strtok(command, " ");
+        int i = 0;
+
+        while (token != NULL && i < MAX_ARGS - 1) {
+            args[i++] = token;
+            token = strtok(NULL, " ");
+        }
+        args[i] = NULL;
+
+        // Check for built-in commands
+        if (i > 0 && strcmp(args[0], "search") == 0) {
+            if (i < 4) {
+                printf("Usage: search [f|c] filename pattern\n");
+                continue;
+            }
+
+            const char *mode = args[1];
+            const char *filename = args[2];
+            const char *pattern = args[3];
+
+            if (strcmp(mode, "f") == 0) {
+                search_first_occurrence(filename, pattern);
+            } else if (strcmp(mode, "c") == 0) {
+                count_occurrences(filename, pattern);
+            } else {
+                printf("Invalid mode: %s. Use 'f' for first occurrence or 'c' for count.\n", mode);
+            }
+        } else {
+            printf("Unknown command: %s\n", args[0]);
+        }
+    }
+
+    return 0;
+}

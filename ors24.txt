@@ -1,0 +1,183 @@
+Q1)
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/wait.h>
+
+void bubbleSort(int arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                int temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+        }
+    }
+}
+
+void insertionSort(int arr[], int n) {
+    for (int i = 1; i < n; i++) {
+        int key = arr[i];
+        int j = i - 1;
+        while (j >= 0 && arr[j] > key) {
+            arr[j + 1] = arr[j];
+            j--;
+        }
+        arr[j + 1] = key;
+    }
+}
+
+int main() {
+    int n;
+
+    printf("Enter the number of integers: ");
+    scanf("%d", &n);
+    
+    int arr[n];
+    printf("Enter %d integers:\n", n);
+    for (int i = 0; i < n; i++) {
+        scanf("%d", &arr[i]);
+    }
+
+    pid_t pid = fork();
+
+    if (pid < 0) {
+        perror("Fork failed");
+        return 1;
+    } else if (pid == 0) {
+        // Child process
+        insertionSort(arr, n);
+        printf("Child Process: Sorted using Insertion Sort:\n");
+        for (int i = 0; i < n; i++) {
+            printf("%d ", arr[i]);
+        }
+        printf("\n");
+    } else {
+        // Parent process
+        bubbleSort(arr, n);
+        printf("Parent Process: Sorted using Bubble Sort:\n");
+        for (int i = 0; i < n; i++) {
+            printf("%d ", arr[i]);
+        }
+        printf("\n");
+        wait(NULL);
+    }
+
+    return 0;
+}
+
+Q2)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+void countCharacters(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("File opening failed");
+        return;
+    }
+
+    int count = 0;
+    char ch;
+    while ((ch = fgetc(file)) != EOF) {
+        count++;
+    }
+    fclose(file);
+    printf("Character count: %d\n", count);
+}
+
+void countWords(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("File opening failed");
+        return;
+    }
+
+    int count = 0;
+    char word[100];
+    while (fscanf(file, "%s", word) == 1) {
+        count++;
+    }
+    fclose(file);
+    printf("Word count: %d\n", count);
+}
+
+void countLines(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("File opening failed");
+        return;
+    }
+
+    int count = 0;
+    char buffer[1000];
+    while (fgets(buffer, sizeof(buffer), file)) {
+        count++;
+    }
+    fclose(file);
+    printf("Line count: %d\n", count);
+}
+
+int main() {
+    char command[256];
+
+    while (1) {
+        printf("myshell$ ");
+        fgets(command, sizeof(command), stdin);
+        command[strcspn(command, "\n")] = 0; // Remove newline character
+
+        char *token = strtok(command, " ");
+        if (token == NULL) {
+            continue;
+        }
+
+        if (strcmp(token, "count") == 0) {
+            token = strtok(NULL, " ");
+            if (token == NULL) {
+                printf("Usage: count <c|w|l> <filename>\n");
+                continue;
+            }
+
+            char *option = token;
+            token = strtok(NULL, " ");
+            if (token == NULL) {
+                printf("Usage: count <c|w|l> <filename>\n");
+                continue;
+            }
+
+            char *filename = token;
+
+            pid_t pid = fork();
+            if (pid < 0) {
+                perror("Fork failed");
+                continue;
+            }
+
+            if (pid == 0) {
+                if (strcmp(option, "c") == 0) {
+                    countCharacters(filename);
+                } else if (strcmp(option, "w") == 0) {
+                    countWords(filename);
+                } else if (strcmp(option, "l") == 0) {
+                    countLines(filename);
+                } else {
+                    printf("Invalid option: %s\n", option);
+                }
+                exit(0);
+            } else {
+                wait(NULL);
+            }
+        } else if (strcmp(token, "exit") == 0) {
+            break;
+        } else {
+            printf("Unknown command: %s\n", token);
+        }
+    }
+
+    return 0;
+}

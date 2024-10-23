@@ -1,0 +1,179 @@
+Q1)
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+
+void bubbleSort(int arr[], int n) {
+    for (int i = 0; i < n - 1; i++) {
+        for (int j = 0; j < n - i - 1; j++) {
+            if (arr[j] > arr[j + 1]) {
+                int temp = arr[j];
+                arr[j] = arr[j + 1];
+                arr[j + 1] = temp;
+            }
+        }
+    }
+}
+
+int binarySearch(int arr[], int size, int item) {
+    int left = 0, right = size - 1;
+    while (left <= right) {
+        int mid = left + (right - left) / 2;
+        if (arr[mid] == item)
+            return mid;
+        if (arr[mid] < item)
+            left = mid + 1;
+        else
+            right = mid - 1;
+    }
+    return -1;
+}
+
+int main() {
+    int n;
+    printf("Enter the number of integers: ");
+    scanf("%d", &n);
+    int arr[n];
+    printf("Enter %d integers:\n", n);
+    for (int i = 0; i < n; i++) {
+        scanf("%d", &arr[i]);
+    }
+    bubbleSort(arr, n);
+    char *args[n + 3];
+    args[0] = "./search_program";
+    for (int i = 0; i < n; i++) {
+        args[i + 1] = (char *)malloc(12);
+        sprintf(args[i + 1], "%d", arr[i]);
+    }
+    int item;
+    printf("Enter the item to search: ");
+    scanf("%d", &item);
+    args[n + 1] = (char *)malloc(12);
+    sprintf(args[n + 1], "%d", item);
+    args[n + 2] = NULL;
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        perror("Fork failed");
+        return 1;
+    } else if (pid == 0) {
+        execve("./search_program", args, NULL);
+        perror("execve failed");
+        exit(1);
+    } else {
+        wait(NULL);
+        for (int i = 1; i <= n; i++) {
+            free(args[i]);
+        }
+        free(args[n + 1]);
+    }
+
+    return 0;
+}
+
+int search_program(int argc, char *argv[]) {
+    if (argc < 3) {
+        printf("Usage: %s <sorted_array_elements> <item_to_search>\n", argv[0]);
+        return 1;
+    }
+    int n = argc - 2;
+    int arr[n];
+    for (int i = 1; i < argc - 1; i++) {
+        arr[i - 1] = atoi(argv[i]);
+    }
+    int item = atoi(argv[argc - 1]);
+    int result = binarySearch(arr, n, item);
+    if (result != -1) {
+        printf("Item %d found at index %d\n", item, result);
+    } else {
+        printf("Item %d not found\n", item);
+    }
+    return 0;
+}
+
+Q2)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+void searchFirstOccurrence(const char *filename, const char *pattern) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("File opening failed");
+        return;
+    }
+
+    char line[1024];
+    int lineNumber = 0;
+    while (fgets(line, sizeof(line), file)) {
+        lineNumber++;
+        if (strstr(line, pattern)) {
+            printf("Pattern found in %s at line %d: %s", filename, lineNumber, line);
+            fclose(file);
+            return;
+        }
+    }
+    printf("Pattern not found in %s\n", filename);
+    fclose(file);
+}
+
+int main() {
+    char command[256];
+
+    while (1) {
+        printf("myshell$ ");
+        fgets(command, sizeof(command), stdin);
+        command[strcspn(command, "\n")] = 0;
+
+        char *token = strtok(command, " ");
+        if (token == NULL) {
+            continue;
+        }
+
+        if (strcmp(token, "search") == 0) {
+            token = strtok(NULL, " ");
+            if (token == NULL || strcmp(token, "f") != 0) {
+                printf("Usage: search f filename pattern\n");
+                continue;
+            }
+
+            token = strtok(NULL, " ");
+            if (token == NULL) {
+                printf("Usage: search f filename pattern\n");
+                continue;
+            }
+
+            char *filename = token;
+            token = strtok(NULL, " ");
+            if (token == NULL) {
+                printf("Usage: search f filename pattern\n");
+                continue;
+            }
+
+            char *pattern = token;
+
+            pid_t pid = fork();
+            if (pid < 0) {
+                perror("Fork failed");
+                continue;
+            }
+
+            if (pid == 0) {
+                searchFirstOccurrence(filename, pattern);
+                exit(0);
+            } else {
+                wait(NULL);
+            }
+        } else if (strcmp(token, "exit") == 0) {
+            break;
+        } else {
+            printf("Unknown command: %s\n", token);
+        }
+    }
+
+    return 0;
+}

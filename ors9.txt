@@ -1,0 +1,195 @@
+Q1)
+#include <stdio.h>
+#include <stdlib.h>
+
+#define MAX_FRAMES 10
+#define MAX_REF_STRING 100
+
+void fifo_page_replacement(int reference_string[], int n, int n_frames) {
+    int memory[MAX_FRAMES] = {-1}; 
+    int page_faults = 0;
+    int frame_index = 0; 
+
+    for (int i = 0; i < n; i++) {
+        int page = reference_string[i];
+        int found = 0;
+
+      
+        for (int j = 0; j < n_frames; j++) {
+            if (memory[j] == page) {
+                found = 1; 
+                break;
+            }
+        }
+
+        if (!found) { 
+            if (frame_index < n_frames) {
+                memory[frame_index] = page; 
+                frame_index++;
+            } else {
+                
+                memory[frame_index % n_frames] = page; 
+            }
+            page_faults++; 
+        }
+
+        
+        printf("Reference: %d, Memory: ", page);
+        for (int j = 0; j < n_frames; j++) {
+            if (memory[j] != -1) {
+                printf("%d ", memory[j]);
+            }
+        }
+        printf(", Page Faults: %d\n", page_faults);
+    }
+
+    printf("\nTotal Page Faults: %d\n", page_faults);
+}
+
+int main() {
+    int reference_string[MAX_REF_STRING];
+    int n, n_frames;
+
+   
+    printf("Enter the number of frames: ");
+    scanf("%d", &n_frames);
+    if (n_frames > MAX_FRAMES) {
+        printf("Maximum number of frames is %d\n", MAX_FRAMES);
+        return 1;
+    }
+
+    
+    printf("Enter the size of the reference string: ");
+    scanf("%d", &n);
+    if (n > MAX_REF_STRING) {
+        printf("Maximum size of reference string is %d\n", MAX_REF_STRING);
+        return 1;
+    }
+
+    
+    printf("Enter the reference string (space-separated): ");
+    for (int i = 0; i < n; i++) {
+        scanf("%d", &reference_string[i]);
+    }
+
+   
+    fifo_page_replacement(reference_string, n, n_frames);
+
+    return 0;
+}
+Q2)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#define MAX_CMD_LEN 1024
+#define MAX_ARGS 100
+
+void search_first_occurrence(const char *filename, const char *pattern) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("Error opening file");
+        return;
+    }
+
+    char line[MAX_CMD_LEN];
+    int line_number = 0;
+
+    while (fgets(line, sizeof(line), file)) {
+        line_number++;
+        if (strstr(line, pattern)) {
+            printf("First occurrence found in line %d: %s", line_number, line);
+            fclose(file);
+            return;
+        }
+    }
+
+    printf("Pattern not found in the file.\n");
+    fclose(file);
+}
+
+void search_all_occurrences(const char *filename, const char *pattern) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("Error opening file");
+        return;
+    }
+
+    char line[MAX_CMD_LEN];
+    int line_number = 0;
+    int found = 0;
+
+    while (fgets(line, sizeof(line), file)) {
+        line_number++;
+        char *pos = line;
+        while ((pos = strstr(pos, pattern)) != NULL) {
+            found = 1;
+            printf("Found in line %d: %s", line_number, line);
+            pos += strlen(pattern);
+        }
+    }
+
+    if (!found) {
+        printf("Pattern not found in the file.\n");
+    }
+
+    fclose(file);
+}
+
+int main() {
+    char command[MAX_CMD_LEN];
+
+    while (1) {
+        printf("myshell$ ");
+        if (fgets(command, sizeof(command), stdin) == NULL) {
+            break;
+        }
+
+        command[strcspn(command, "\n")] = 0;
+
+        char *args[MAX_ARGS];
+        char *token = strtok(command, " ");
+        int i = 0;
+
+        while (token != NULL && i < MAX_ARGS - 1) {
+            args[i++] = token;
+            token = strtok(NULL, " ");
+        }
+        args[i] = NULL;
+
+        if (i > 0 && strcmp(args[0], "search") == 0) {
+            if (i < 4) {
+                printf("Usage: search [f|a] filename pattern\n");
+                continue;
+            }
+
+            const char *mode = args[1];
+            const char *filename = args[2];
+            const char *pattern = args[3];
+
+            pid_t pid = fork();
+            if (pid < 0) {
+                perror("Error creating child process");
+                continue;
+            } else if (pid == 0) {
+                if (strcmp(mode, "f") == 0) {
+                    search_first_occurrence(filename, pattern);
+                } else if (strcmp(mode, "a") == 0) {
+                    search_all_occurrences(filename, pattern);
+                } else {
+                    printf("Invalid mode: %s. Use 'f' for first occurrence or 'a' for all occurrences.\n", mode);
+                }
+                exit(0);
+            } else {
+                wait(NULL);
+            }
+        } else {
+            printf("Unknown command: %s\n", args[0]);
+        }
+    }
+
+    return 0;
+}

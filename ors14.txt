@@ -1,0 +1,147 @@
+Q1)
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+#define MAX_CMD_LEN 1024
+#define MAX_ARGS 100
+
+void print_lines(const char *filename, int n) {
+    FILE *file = fopen(filename, "r");
+    if (!file) {
+        perror("Error opening file");
+        return;
+    }
+
+    char line[MAX_CMD_LEN];
+    for (int i = 0; i < n && fgets(line, sizeof(line), file); i++) {
+        printf("%s", line);
+    }
+
+    fclose(file);
+}
+
+int main() {
+    char command[MAX_CMD_LEN];
+
+    while (1) {
+        printf("myshell$ ");
+        if (fgets(command, sizeof(command), stdin) == NULL) {
+            break;
+        }
+
+        command[strcspn(command, "\n")] = 0;
+
+        char *args[MAX_ARGS];
+        char *token = strtok(command, " ");
+        int i = 0;
+
+        while (token != NULL && i < MAX_ARGS - 1) {
+            args[i++] = token;
+            token = strtok(NULL, " ");
+        }
+        args[i] = NULL;
+
+        if (i > 0) {
+            pid_t pid = fork();
+            if (pid < 0) {
+                perror("Error creating child process");
+                continue;
+            } else if (pid == 0) {
+                if (strcmp(args[0], "typeline") == 0 && i == 3 && args[1][0] == '+') {
+                    int n = atoi(args[1] + 1);
+                    print_lines(args[2], n);
+                } else {
+                    printf("Unknown command: %s\n", args[0]);
+                }
+                exit(0);
+            } else {
+                wait(NULL);
+            }
+        }
+    }
+
+    return 0;
+}
+
+Q2)
+#include <stdio.h>
+#include <stdlib.h>
+
+typedef struct {
+    int id;
+    int arrival;
+    int burst;
+    int waiting;
+    int turnaround;
+} Process;
+
+void calculateSJF(Process processes[], int n) {
+    int completed = 0, time = 0, total_waiting = 0, total_turnaround = 0;
+    int gantt_chart[100];
+    int gantt_index = 0;
+
+    while (completed < n) {
+        int idx = -1;
+        int min_burst = 9999;
+        
+        for (int i = 0; i < n; i++) {
+            if (processes[i].arrival <= time && processes[i].burst > 0 && processes[i].burst < min_burst) {
+                min_burst = processes[i].burst;
+                idx = i;
+            }
+        }
+
+        if (idx != -1) {
+            gantt_chart[gantt_index++] = processes[idx].id;
+            time += processes[idx].burst;
+            processes[idx].waiting = time - processes[idx].arrival - processes[idx].burst;
+            processes[idx].turnaround = time - processes[idx].arrival;
+            total_waiting += processes[idx].waiting;
+            total_turnaround += processes[idx].turnaround;
+            processes[idx].burst = 0;
+            completed++;
+        } else {
+            time++;
+        }
+    }
+
+    printf("\nGantt Chart:\n");
+    for (int i = 0; i < gantt_index; i++) {
+        printf("P%d ", gantt_chart[i]);
+        if (i < gantt_index - 1) {
+            printf("--> ");
+        }
+    }
+    printf("\n");
+
+    printf("Process\tTurnaround Time\tWaiting Time\n");
+    for (int i = 0; i < n; i++) {
+        printf("P%d\t%d\t\t%d\n", processes[i].id, processes[i].turnaround, processes[i].waiting);
+    }
+
+    printf("\nAverage Turnaround Time: %.2f\n", (float)total_turnaround / n);
+    printf("Average Waiting Time: %.2f\n", (float)total_waiting / n);
+}
+
+int main() {
+    int n;
+    printf("Enter the number of processes: ");
+    scanf("%d", &n);
+
+    Process processes[n];
+
+    for (int i = 0; i < n; i++) {
+        processes[i].id = i + 1;
+        printf("Enter arrival time and burst time for Process P%d: ", processes[i].id);
+        scanf("%d %d", &processes[i].arrival, &processes[i].burst);
+        processes[i].waiting = 0;
+        processes[i].turnaround = 0;
+    }
+
+    calculateSJF(processes, n);
+    return 0;
+}
